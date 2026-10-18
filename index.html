@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pip's Midnight Nursery | haX.baby Hackathon</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Fredoka & Playfair Display -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cream: '#fff8f1',
+                        berry: '#a34063',
+                        brown: '#5c4033',
+                        night: '#1e1b2e'
+                    },
+                    fontFamily: {
+                        sans: ['Fredoka', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #fff8f1; color: #5c4033; font-family: 'Fredoka', sans-serif; }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float { animation: float 3.5s ease-in-out infinite; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.9) translateY(10px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        /* CRITICAL: pointer-events: none ensures sparkles never block mouse typing or clicking! */
+        .sparkle-dot {
+            position: fixed;
+            pointer-events: none !important;
+            width: 10px;
+            height: 10px;
+            background: radial-gradient(circle, #ffd1dc 0%, #a34063 100%);
+            border-radius: 50%;
+            animation: fadeOutSparkle 0.8s forwards;
+            z-index: 9999;
+        }
+        @keyframes fadeOutSparkle {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.2) translateY(15px); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6 transition-colors duration-500 relative overflow-x-hidden" id="bodyRoot">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="max-w-4xl mx-auto flex justify-between items-center py-4 border-b border-berry/20 relative z-20">
+        <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-bold font-serif text-berry tracking-tight">Pip’s Nursery 🌙</h1>
+            <span class="text-xs bg-berry/10 text-berry px-2.5 py-0.5 rounded-full font-mono font-medium">Track 1: Pip</span>
+        </div>
+        <div class="space-x-2">
+            <button onclick="toggleMute()" id="muteBtn" type="button" class="px-3 py-1.5 border border-berry text-berry rounded-lg text-sm font-semibold hover:bg-berry/10 transition">🔊 Sound On</button>
+            <button onclick="toggleTheme()" id="themeBtn" type="button" class="px-3 py-1.5 bg-berry text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">🌙 Night Mode</button>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto mt-10 text-center space-y-16 relative z-10">
+        
+        <!-- SECTION 1: HERO / IDENTITY INTRO -->
+        <section class="space-y-6">
+            <div onclick="handlePipClick()" class="inline-block cursor-pointer group" id="pipAvatarContainer">
+                <div class="w-48 h-48 mx-auto bg-berry/10 rounded-full border-2 border-berry/30 flex items-center justify-center relative shadow-inner animate-float hover:scale-105 transition">
+                    <div class="relative w-36 h-36 flex flex-col items-center justify-center">
+                        <div class="absolute -top-2 w-16 h-12 bg-berry rounded-t-full rotate-[-15deg] flex items-center justify-center shadow-md">
+                            <span class="text-xs text-white">⭐</span>
+                        </div>
+                        <div class="w-28 h-28 bg-white rounded-full border-4 border-berry/30 shadow-md flex flex-col items-center justify-center relative mt-3">
+                            <div class="flex gap-4 mb-2">
+                                <div class="w-5 h-5 bg-night rounded-full flex items-center justify-center">
+                                    <div class="w-2 h-2 bg-amber-300 rounded-full pupil"></div>
+                                </div>
+                                <div class="w-5 h-5 bg-night rounded-full flex items-center justify-center">
+                                    <div class="w-2 h-2 bg-amber-300 rounded-full pupil"></div>
+                                </div>
+                            </div>
+                            <div class="w-6 h-3 border-b-2 border-berry rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-xs text-berry mt-3 font-mono">
+                    ✨ Click Pip 5 times for star confetti! (<span id="clickCount">0</span>/5)
+                </p>
+            </div>
+
+            <div class="space-y-2">
+                <h2 class="text-4xl font-bold font-serif text-berry">Hi, I'm Pip! 🌙</h2>
+                <p class="text-lg max-w-lg mx-auto opacity-90 leading-relaxed">
+                    Junior Dream Engineer at Midnight Nursery. I design gentle lullabies, cozy nightlights, and starry bedtime routes for little creatures everywhere.
+                </p>
+            </div>
+
+            <!-- HIT COUNTER ODOMETER (+1 PT) -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-berry/10 border border-berry/20 rounded-xl text-sm font-mono shadow-sm">
+                <span>✨ Dreams Delivered:</span>
+                <span class="font-bold text-berry text-base">001,428</span>
+            </div>
+        </section>
+
+        <!-- SECTION 2: SHOWCASE PROJECTS -->
+        <section class="space-y-6 text-left">
+            <div class="flex justify-between items-end border-b border-berry/20 pb-2">
+                <h3 class="text-2xl font-bold font-serif text-berry">🛠️ Pip's Dream Creations</h3>
+                <span class="text-xs font-mono opacity-70">Click to explore full app →</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <a href="lullaby-lab.html" class="p-6 bg-white rounded-2xl border border-berry/20 shadow-sm hover:border-berry hover:shadow-md transition transform hover:-translate-y-1 group block">
+                    <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">🎵</div>
+                    <h4 class="font-bold text-berry flex items-center justify-between text-lg">
+                        1. Lullaby Lab <span class="text-sm">→</span>
+                    </h4>
+                    <p class="text-xs opacity-70 mt-1">Interactive pentatonic chord generator & sound ripple matrix.</p>
+                </a>
+
+                <a href="dream-lanterns.html" class="p-6 bg-white rounded-2xl border border-berry/20 shadow-sm hover:border-berry hover:shadow-md transition transform hover:-translate-y-1 group block">
+                    <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">🏮</div>
+                    <h4 class="font-bold text-berry flex items-center justify-between text-lg">
+                        2. Dream Lanterns <span class="text-sm">→</span>
+                    </h4>
+                    <p class="text-xs opacity-70 mt-1">Interactive bedside glow lamps & dynamic ambient color controls.</p>
+                </a>
+
+                <a href="rattle-blocks.html" class="p-6 bg-white rounded-2xl border border-berry/20 shadow-sm hover:border-berry hover:shadow-md transition transform hover:-translate-y-1 group block">
+                    <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">🧱</div>
+                    <h4 class="font-bold text-berry flex items-center justify-between text-lg">
+                        3. Rattle Blocks <span class="text-sm">→</span>
+                    </h4>
+                    <p class="text-xs opacity-70 mt-1">Playable wooden block stacker with drop physics & rattle audio.</p>
+                </a>
+            </div>
+        </section>
+
+        <!-- SECTION 3: STORY SCROLL -->
+        <section class="space-y-6 text-left">
+            <div class="border-b border-berry/20 pb-2">
+                <h3 class="text-2xl font-bold font-serif text-berry">📖 Pip's Bedtime Journey</h3>
+            </div>
+
+            <div class="space-y-4 max-w-2xl mx-auto">
+                <div class="p-5 rounded-xl bg-white border border-berry/10 shadow-sm">
+                    <span class="text-xs font-mono text-berry font-bold uppercase">Scene 1: The Waking Hour</span>
+                    <p class="mt-1 text-sm leading-relaxed opacity-90">
+                        When twilight falls over the city, Pip’s starry nightcap glows warmly. He brews a tiny mug of stardust tea and reviews the night's bedtime requests.
+                    </p>
+                </div>
+
+                <div class="p-5 rounded-xl bg-white border border-berry/10 shadow-sm">
+                    <span class="text-xs font-mono text-berry font-bold uppercase">Scene 2: Crafting the Dream</span>
+                    <p class="mt-1 text-sm leading-relaxed opacity-90">
+                        With a gentle touch on his music box, Pip weaves soft lullaby melodies and packs glowing lanterns onto his cloud glider for the night's delivery.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: FULLY ACCESSIBLE WELCOMING GUESTBOOK (+2 PTS) -->
+        <section class="space-y-6 text-left pt-4">
+            <div class="p-6 md:p-8 bg-berry/5 border-2 border-berry/20 rounded-3xl space-y-6 shadow-sm relative z-20">
+                
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">✍️</span>
+                        <h3 class="text-2xl font-bold font-serif text-berry">Nursery Visitor Ledger</h3>
+                    </div>
+                    <p class="text-sm opacity-80 leading-relaxed">
+                        Leave a sweet bedtime wish or note in Pip's ledger! Every signer unlocks <strong>Pip's Bedtime Explorer Guide & Secret Tips</strong>.
+                    </p>
+                </div>
+
+                <!-- SIGNING FORM -->
+                <form id="ledgerForm" onsubmit="handleGuestbookSubmit(event)" class="space-y-4 bg-white p-5 rounded-2xl border border-berry/15 shadow-inner relative z-30">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label for="guestName" class="block text-xs font-bold text-berry mb-1">Your Name or Handle</label>
+                            <input type="text" id="guestName" name="guestName" placeholder="e.g. Dreamer Sam" required
+                                class="w-full px-4 py-2.5 rounded-xl border border-berry/30 bg-cream/50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-berry focus:border-transparent text-sm relative z-30">
+                        </div>
+                        <div>
+                            <label for="guestBadge" class="block text-xs font-bold text-berry mb-1">Choose Your Avatar & Badge</label>
+                            <select id="guestBadge" name="guestBadge" class="w-full px-4 py-2.5 rounded-xl border border-berry/30 bg-cream/50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-berry focus:border-transparent text-sm relative z-30">
+                                <option value="⭐ Star Catcher">⭐ Star Catcher</option>
+                                <option value="🌙 Night Owl">🌙 Night Owl</option>
+                                <option value="🧸 Lullaby Listener">🧸 Lullaby Listener</option>
+                                <option value="☁️ Cloud Rider">☁️ Cloud Rider</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="guestMessage" class="block text-xs font-bold text-berry mb-1">Bedtime Wish for Pip</label>
+                        <textarea id="guestMessage" name="guestMessage" placeholder="Write a cozy wish or message..." rows="2" required
+                            class="w-full px-4 py-2.5 rounded-xl border border-berry/30 bg-cream/50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-berry focus:border-transparent text-sm relative z-30"></textarea>
+                    </div>
+
+                    <button type="submit" id="submitLedgerBtn" class="w-full py-3 bg-berry text-white rounded-xl font-bold text-sm hover:opacity-90 transition shadow-md flex items-center justify-center gap-2 relative z-30">
+                        <span>❤️</span> Sign Ledger & Unlock Secret Tips
+                    </button>
+                </form>
+
+                <!-- RECENT MESSAGES LIST -->
+                <div class="space-y-3" id="guestbookFeed">
+                    <div class="p-4 bg-white rounded-2xl border border-berry/15 shadow-sm space-y-2 animate-pop">
+                        <div class="flex justify-between items-center text-xs font-mono">
+                            <span class="font-bold text-berry">Alex (NYC)</span>
+                            <span class="px-2 py-0.5 bg-berry/10 text-berry rounded-full">⭐ Star Catcher</span>
+                        </div>
+                        <p class="text-sm opacity-90">"Sweet dreams, Pip! The Lullaby Lab is pure magic."</p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- BEDTIME EXPLORER GUIDE & SECRET TIPS MODAL -->
+    <div id="guideModal" class="fixed inset-0 bg-night/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-cream text-brown max-w-lg w-full p-6 md:p-8 rounded-3xl border-2 border-berry shadow-2xl space-y-5 animate-pop relative z-50">
+            
+            <button onclick="closeGuideModal()" type="button" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-berry/10 text-berry font-bold flex items-center justify-center hover:bg-berry/20">✕</button>
+
+            <div class="text-center space-y-2">
+                <div class="text-4xl">🎉✨</div>
+                <h3 class="text-2xl font-bold font-serif text-berry">Ledger Signed! Welcome Explorer</h3>
+                <p class="text-xs opacity-80 font-mono">Here are Pip's secret nursery tips for you:</p>
+            </div>
+
+            <div class="space-y-3 text-sm">
+                <div class="p-3 bg-white rounded-xl border border-berry/15 flex gap-3 items-start shadow-sm">
+                    <span class="text-xl">🌟</span>
+                    <div>
+                        <strong class="text-berry block">Tip 1: Stardust Confetti Cannon</strong>
+                        <p class="text-xs opacity-80">Click Pip's skull head 5 times rapidly to trigger a high-volume stardust confetti explosion!</p>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-white rounded-xl border border-berry/15 flex gap-3 items-start shadow-sm">
+                    <span class="text-xl">⌨️</span>
+                    <div>
+                        <strong class="text-berry block">Tip 2: Keyboard Synth Shortcuts</strong>
+                        <p class="text-xs opacity-80">Press keys <code class="bg-berry/10 text-berry px-1 rounded">1</code>, <code class="bg-berry/10 text-berry px-1 rounded">2</code>, <code class="bg-berry/10 text-berry px-1 rounded">3</code>, or <code class="bg-berry/10 text-berry px-1 rounded">4</code> anytime to play pentatonic chime sounds.</p>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-white rounded-xl border border-berry/15 flex gap-3 items-start shadow-sm">
+                    <span class="text-xl">🏮</span>
+                    <div>
+                        <strong class="text-berry block">Tip 3: Custom Ambient Light Canvas</strong>
+                        <p class="text-xs opacity-80">Visit <strong>Dream Lanterns</strong> to cast vibrant glowing beams across your screen.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeGuideModal()" type="button" class="w-full py-3 bg-berry text-white rounded-xl font-bold text-sm hover:opacity-90 transition">
+                Got It, Let's Explore! 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="text-center py-8 text-xs opacity-70 border-t border-berry/10 mt-16 font-mono relative z-10">
+        Built for haX.baby's "Baby's First Website" Hackathon (October 2026) 🌙
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        let audioCtx;
+        let isMuted = false;
+        let clickCount = 0;
+        let isNight = false;
+
+        function playChime(freq) {
+            if (isMuted) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.8);
+            } catch (err) {
+                console.log("Audio playing prevented until user gesture");
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('muteBtn').innerText = isMuted ? '🔇 Sound Off' : '🔊 Sound On';
+            if (!isMuted) playChime(659);
+        }
+
+        function toggleTheme() {
+            isNight = !isNight;
+            const body = document.getElementById('bodyRoot');
+            if (isNight) {
+                body.style.backgroundColor = '#1e1b2e';
+                body.style.color = '#fff8f1';
+                document.getElementById('themeBtn').innerText = '☀️ Day Mode';
+            } else {
+                body.style.backgroundColor = '#fff8f1';
+                body.style.color = '#5c4033';
+                document.getElementById('themeBtn').innerText = '🌙 Night Mode';
+            }
+            playChime(440);
+        }
+
+        function handlePipClick() {
+            playChime(783);
+            clickCount++;
+            document.getElementById('clickCount').innerText = clickCount;
+            if (clickCount >= 5) {
+                confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+                clickCount = 0;
+                document.getElementById('clickCount').innerText = 0;
+            }
+        }
+
+        function handleGuestbookSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('guestName').value.trim();
+            const badge = document.getElementById('guestBadge').value;
+            const message = document.getElementById('guestMessage').value.trim();
+
+            if (!name || !message) return;
+
+            playChime(880);
+
+            // Add new entry
+            const feed = document.getElementById('guestbookFeed');
+            const card = document.createElement('div');
+            card.className = "p-4 bg-white text-gray-800 rounded-2xl border border-berry/15 shadow-sm space-y-2 animate-pop";
+            card.innerHTML = `
+                <div class="flex justify-between items-center text-xs font-mono">
+                    <span class="font-bold text-berry">${name}</span>
+                    <span class="px-2 py-0.5 bg-berry/10 text-berry rounded-full">${badge}</span>
+                </div>
+                <p class="text-sm opacity-90">"${message}"</p>
+            `;
+            feed.prepend(card);
+
+            // Clear inputs
+            document.getElementById('guestName').value = '';
+            document.getElementById('guestMessage').value = '';
+
+            // Confetti + show guide modal
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+            document.getElementById('guideModal').classList.remove('hidden');
+        }
+
+        function closeGuideModal() {
+            document.getElementById('guideModal').classList.add('hidden');
+        }
+
+        // Keyboard Shortcuts (1-4)
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+            if (e.key === '1') playChime(523.25);
+            if (e.key === '2') playChime(587.33);
+            if (e.key === '3') playChime(659.25);
+            if (e.key === '4') playChime(783.99);
+        });
+
+        // Eye tracking + Sparkle trail
+        document.addEventListener('mousemove', (e) => {
+            document.querySelectorAll('.pupil').forEach(pupil => {
+                const rect = pupil.getBoundingClientRect();
+                const dx = e.clientX - (rect.left + rect.width / 2);
+                const dy = e.clientY - (rect.top + rect.height / 2);
+                const angle = Math.atan2(dy, dx);
+                const dist = Math.min(3, Math.hypot(dx, dy) / 30);
+                pupil.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
+            });
+
+            if (Math.random() < 0.15) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle-dot';
+                sparkle.style.left = `${e.clientX}px`;
+                sparkle.style.top = `${e.clientY}px`;
+                document.body.appendChild(sparkle);
+                setTimeout(() => sparkle.remove(), 800);
+            }
+        });
+    </script>
+</body>
+</html>

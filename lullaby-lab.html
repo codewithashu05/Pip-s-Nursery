@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lullaby Lab | Pip's Creations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #fff8f1; color: #5c4033; font-family: sans-serif; }
+        
+        @keyframes ripple {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2.4); opacity: 0; }
+        }
+        .animate-ripple { animation: ripple 0.8s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+
+    <div class="max-w-3xl mx-auto space-y-8">
+        <!-- Back Navigation -->
+        <a href="index.html" class="inline-flex items-center gap-2 text-sm font-bold text-[#a34063] hover:underline">
+            ← Back to Pip's Nursery
+        </a>
+
+        <header class="text-center space-y-2">
+            <h1 class="text-4xl font-bold text-[#a34063]">🎵 The Lullaby Lab</h1>
+            <p class="text-sm opacity-80">Click the chime pads below to craft custom soothing sleep melodies for Midnight Nursery!</p>
+        </header>
+
+        <!-- Interactive Sound Matrix Pads -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="padMatrix">
+            <button onclick="triggerPad(261.63, 'C4', this)" class="p-8 bg-white rounded-2xl border-2 border-[#a34063]/30 shadow-md hover:border-[#a34063] active:scale-95 transition relative overflow-hidden flex flex-col items-center">
+                <span class="text-2xl">🎹</span>
+                <span class="font-bold text-[#a34063] mt-2">Soft C</span>
+            </button>
+            <button onclick="triggerPad(293.66, 'D4', this)" class="p-8 bg-white rounded-2xl border-2 border-[#a34063]/30 shadow-md hover:border-[#a34063] active:scale-95 transition relative overflow-hidden flex flex-col items-center">
+                <span class="text-2xl">✨</span>
+                <span class="font-bold text-[#a34063] mt-2">Dream D</span>
+            </button>
+            <button onclick="triggerPad(329.63, 'E4', this)" class="p-8 bg-white rounded-2xl border-2 border-[#a34063]/30 shadow-md hover:border-[#a34063] active:scale-95 transition relative overflow-hidden flex flex-col items-center">
+                <span class="text-2xl">🌙</span>
+                <span class="font-bold text-[#a34063] mt-2">Starlight E</span>
+            </button>
+            <button onclick="triggerPad(392.00, 'G4', this)" class="p-8 bg-white rounded-2xl border-2 border-[#a34063]/30 shadow-md hover:border-[#a34063] active:scale-95 transition relative overflow-hidden flex flex-col items-center">
+                <span class="text-2xl">☁️</span>
+                <span class="font-bold text-[#a34063] mt-2">Cloud G</span>
+            </button>
+        </div>
+
+        <!-- Played Sequence Log -->
+        <div class="p-6 bg-white rounded-2xl border border-[#a34063]/20 shadow-sm text-center space-y-3">
+            <h3 class="font-bold text-[#a34063]">Current Melodic Sequence</h3>
+            <div id="melodyLog" class="flex justify-center gap-2 font-mono text-sm min-h-[28px]">
+                <span class="text-gray-400 italic">Click any pad to play...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx;
+
+        function triggerPad(freq, note, element) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1.2);
+
+            let circle = document.createElement('div');
+            circle.className = 'absolute inset-0 bg-[#a34063]/20 rounded-full animate-ripple pointer-events-none';
+            element.appendChild(circle);
+            setTimeout(() => circle.remove(), 800);
+
+            let log = document.getElementById('melodyLog');
+            if (log.querySelector('.italic')) log.innerHTML = '';
+            let noteTag = document.createElement('span');
+            noteTag.className = 'px-3 py-1 bg-[#a34063] text-white rounded-full font-bold text-xs animate-bounce';
+            noteTag.innerText = note;
+            log.appendChild(noteTag);
+        }
+    </script>
+</body>
+</html>

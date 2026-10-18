@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rattle Blocks | Pip's Creations</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #fff8f1; color: #5c4033; font-family: sans-serif; }
+        
+        @keyframes dropIn {
+            0% { transform: translateY(-100px) rotate(-10deg); opacity: 0; }
+            60% { transform: translateY(10px) rotate(3deg); opacity: 1; }
+            100% { transform: translateY(0) rotate(0); }
+        }
+        .animate-drop { animation: dropIn 0.5s ease-out forwards; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+
+    <div class="max-w-2xl mx-auto space-y-8">
+        <!-- Back Navigation -->
+        <a href="index.html" class="inline-flex items-center gap-2 text-sm font-bold text-[#a34063] hover:underline">
+            ← Back to Pip's Nursery
+        </a>
+
+        <header class="text-center space-y-2">
+            <h1 class="text-4xl font-bold text-[#a34063]">🧱 Rattle & Stacking Blocks</h1>
+            <p class="text-sm opacity-80">Click "Add Block" to build Pip's wooden block tower with playful sound effects!</p>
+        </header>
+
+        <!-- Controls -->
+        <div class="flex justify-center gap-4">
+            <button onclick="addBlock()" class="px-6 py-3 bg-[#a34063] text-white rounded-xl font-bold hover:opacity-90 transition shadow-md">
+                ➕ Add Wooden Block
+            </button>
+            <button onclick="resetBlocks()" class="px-6 py-3 border border-[#a34063] text-[#a34063] rounded-xl font-bold hover:bg-[#a34063]/10 transition">
+                🧹 Clear Tower
+            </button>
+        </div>
+
+        <!-- Stack Container Area -->
+        <div class="p-8 bg-white rounded-2xl border-2 border-dashed border-[#a34063]/30 min-h-[320px] flex flex-col-reverse items-center justify-start gap-2 shadow-inner" id="towerContainer">
+            <div class="text-xs text-gray-400 font-mono italic">Tower base (stack blocks here!)</div>
+        </div>
+    </div>
+
+    <script>
+        let audioCtx;
+        const blockColors = ['bg-rose-400', 'bg-amber-400', 'bg-teal-400', 'bg-indigo-400', 'bg-purple-400'];
+        const blockIcons = ['🧱', '⭐', '🌙', '☁️', '🎈'];
+
+        function addBlock() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = 300 + Math.random() * 200;
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+
+            let container = document.getElementById('towerContainer');
+            let color = blockColors[Math.floor(Math.random() * blockColors.length)];
+            let icon = blockIcons[Math.floor(Math.random() * blockIcons.length)];
+
+            let block = document.createElement('div');
+            block.className = `w-48 h-12 ${color} text-white font-bold rounded-xl flex items-center justify-center gap-2 shadow-md animate-drop`;
+            block.innerHTML = `<span>${icon}</span> <span>Nursery Block</span>`;
+
+            container.appendChild(block);
+        }
+
+        function resetBlocks() {
+            document.getElementById('towerContainer').innerHTML = '<div class="text-xs text-gray-400 font-mono italic">Tower base (stack blocks here!)</div>';
+        }
+    </script>
+</body>
+</html>
